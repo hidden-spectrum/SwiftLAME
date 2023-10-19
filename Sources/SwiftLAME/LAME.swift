@@ -16,11 +16,14 @@ public final class LAME {
     
     // MARK: Private
     
-    private var lame: lame_t!
+    private let sourceChannelCount: AVAudioChannelCount
+    private let headerSafetyNetByteCount: UInt32 = 7200
+    
+    private let lame: lame_t!
     
     // MARK: Lifecycle
     
-    public init(for audioFile: AVAudioFile, sourceChannelCount: UInt32, bitrateMode: BitrateMode, quality: LAMEQuality, sampleRate: SampleRate) {
+    public init(for audioFile: AVAudioFile, sourceChannelCount: AVAudioChannelCount, bitrateMode: BitrateMode, quality: LAMEQuality, sampleRate: SampleRate) {
         let lame = lame_init()
         lame_set_in_samplerate(lame, Int32(audioFile.processingFormat.sampleRate))
         lame_set_out_samplerate(lame, sampleRate.lameRepresentation)
@@ -29,6 +32,7 @@ public final class LAME {
         bitrateMode.configure(on: lame)
         lame_init_params(lame)
         self.lame = lame
+        self.sourceChannelCount = sourceChannelCount
     }
     
     deinit {
@@ -45,9 +49,8 @@ public final class LAME {
             throw LAMEError.couldNotReadChannelDataFromPCMBuffer
         }
         let frameLength = sourceAudioBuffer.frameLength
-        let channelCount = sourceAudioBuffer.format.channelCount
         
-        let outputBufferSize = 7200 + frameLength * channelCount
+        let outputBufferSize = headerSafetyNetByteCount + frameLength * sourceChannelCount
         var outputBuffer = Data(count: Int(outputBufferSize))
         var encodeLength: Int = 0
         
@@ -68,7 +71,7 @@ public final class LAME {
                 )
             }
             
-            outputStream.write(baseAddress, maxLength: Int(encodeLength))
+            outputStream.write(baseAddress, maxLength: encodeLength)
         }
     }
     
@@ -81,7 +84,7 @@ public final class LAME {
         data: UnsafePointer<UnsafeMutablePointer<Float>>,
         frameLength: AVAudioFrameCount,
         baseAddress: UnsafeMutablePointer<UInt8>,
-        outputBufferSize: UInt32
+        outputBufferSize: AVAudioFrameCount
     ) -> Int {
         let encodeLength = lame_encode_buffer_ieee_float(
             lame,
@@ -98,7 +101,7 @@ public final class LAME {
         data: UnsafePointer<UnsafeMutablePointer<Int16>>,
         frameLength: AVAudioFrameCount,
         baseAddress: UnsafeMutablePointer<UInt8>,
-        outputBufferSize: UInt32
+        outputBufferSize: AVAudioFrameCount
     ) -> Int {
         let encodeLength = lame_encode_buffer_interleaved(
             lame,
