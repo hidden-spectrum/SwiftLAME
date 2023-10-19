@@ -60,7 +60,7 @@ public struct SwiftLameEncoder {
     ) throws {
         let sourceChannelData = try sourceAudioBuffer.getChannelData()
         let frameLength = sourceAudioBuffer.frameLength
-        let outputBufferSize = headerSafetyNetByteCount + frameLength * lame.sourceChannelCount
+        let outputBufferSize = frameLength * lame.sourceChannelCount
         var outputBuffer = Data(count: Int(outputBufferSize))
         
         var encodeLength = 0
@@ -72,7 +72,10 @@ public struct SwiftLameEncoder {
             }
             
             if frameLength == 0 {
-                encodeLength = lame.encodeFlushNoGap(at: baseAddress)
+                encodeLength = lame.encodeFlushNoGap(
+                    at: baseAddress,
+                    outputBufferSize: outputBufferSize
+                )
             } else {
                 encodeLength = encodeChannelData(
                     sourceChannelData,
