@@ -1,23 +1,43 @@
-// swift-tools-version: 5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
+// swift-tools-version: 5.7
 
 import PackageDescription
 
+
 let package = Package(
-    name: "SwiftLAME",
+    name: "SwiftMP3",
+    platforms: [.macOS(.v12)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "SwiftLAME",
-            targets: ["SwiftLAME"]),
+            targets: ["SwiftLAME"]
+        ),
+        .library(
+            name: "LAME",
+            targets: ["LAME"]
+        ),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
+        
+        // Targets
+        
         .target(
-            name: "SwiftLAME"),
+            name: "LAME",
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("HAVE_CONFIG_H")
+            ]
+        ),
+        
+        .target(
+            name: "SwiftLAME",
+            dependencies: ["LAME"]
+        ),
+        
+        // Tests
+        
         .testTarget(
             name: "SwiftLAMETests",
-            dependencies: ["SwiftLAME"]),
+            dependencies: ["SwiftLAME"]
+        )
     ]
 )
