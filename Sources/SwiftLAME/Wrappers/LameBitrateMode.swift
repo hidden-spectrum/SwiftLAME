@@ -29,7 +29,7 @@ public enum LameVbrMode: UInt32 {
     case average = 3
     case modernRH = 4
     
-    static let `default`: Self = .modernRH
+    public static let `default`: Self = .modernRH
     
     var lameRepresentation: vbr_mode {
         vbr_mode(rawValue)
