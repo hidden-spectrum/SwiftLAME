@@ -22,33 +22,31 @@ public struct SwiftLameEncoder {
     
     // MARK: Encoding
     
-    public func encode() throws {
-        
-        // Create a buffer
+    public func encode(priority: TaskPriority = .medium) async throws {
+        try await Task(priority: priority) {
+            try _encode()
+        }.value
+    }
+    
+    private func _encode() throws {
         let audioFormat = sourceAudioFile.processingFormat
         let frameCapacity: AVAudioFrameCount = 1024 * 8
         
         guard let sourceAudioBuffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: frameCapacity) else {
             throw SwiftLameError.couldNotCreateAudioPCMBuffer
         }
-        
-        let lame = Lame(for: sourceAudioFile, configuration: configuration)
-        
         guard let outputStream = OutputStream(url: destinationUrl, append: true) else {
             throw SwiftLameError.couldNotCreateOutputStreamTo(url: destinationUrl)
         }
+        
+        let lame = Lame(for: sourceAudioFile, configuration: configuration)
         
         outputStream.open()
         var position: AVAudioFramePosition = 0
         
         while position < sourceAudioFile.length {
-            do {
-                try sourceAudioFile.read(into: sourceAudioBuffer)
-                try encodeChunk(using: lame, from: sourceAudioBuffer, to: outputStream)
-            } catch {
-                print(error)
-            }
-            
+            try sourceAudioFile.read(into: sourceAudioBuffer)
+            try encodeChunk(using: lame, from: sourceAudioBuffer, to: outputStream)
             position += AVAudioFramePosition(sourceAudioBuffer.frameLength)
         }
         
@@ -60,14 +58,12 @@ public struct SwiftLameEncoder {
         from sourceAudioBuffer: AVAudioPCMBuffer,
         to outputStream: OutputStream
     ) throws {
-        guard let sourceChannelData = sourceAudioBuffer.floatChannelData else {
-            throw SwiftLameError.couldNotReadChannelDataFromPCMBuffer
-        }
+        let sourceChannelData = try sourceAudioBuffer.getChannelData()
         let frameLength = sourceAudioBuffer.frameLength
-        
         let outputBufferSize = headerSafetyNetByteCount + frameLength * lame.sourceChannelCount
         var outputBuffer = Data(count: Int(outputBufferSize))
-        var encodeLength: Int = 0
+        
+        var encodeLength = 0
         
         try outputBuffer.withUnsafeMutableBytes { (rawOutputBufferPointer: UnsafeMutableRawBufferPointer) in
             let boundBuffer = rawOutputBufferPointer.bindMemory(to: UInt8.self)
@@ -78,8 +74,9 @@ public struct SwiftLameEncoder {
             if frameLength == 0 {
                 encodeLength = lame.encodeFlushNoGap(at: baseAddress)
             } else {
-                encodeLength = lame.encodeBufferIEEEFloat(
-                    data: sourceChannelData,
+                encodeLength = encodeChannelData(
+                    sourceChannelData,
+                    using: lame,
                     frameLength: frameLength,
                     baseAddress: baseAddress,
                     outputBufferSize: outputBufferSize
@@ -87,6 +84,23 @@ public struct SwiftLameEncoder {
             }
             
             outputStream.write(baseAddress, maxLength: encodeLength)
+        }
+    }
+    
+    private func encodeChannelData(
+        _ channelData: AVAudioChannelData,
+        using lame: Lame,
+        frameLength: AVAudioFrameCount,
+        baseAddress: UnsafeMutablePointer<UInt8>,
+        outputBufferSize: UInt32
+    ) -> Int {
+        switch channelData {
+        case .float(let data):
+            return lame.encodeBufferIEEEFloat(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
+        case .int16(let data):
+            return lame.encodeBufferInterleaved(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
+        case .int32(let data):
+            return lame.encodeBufferInt32(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
         }
     }
 }

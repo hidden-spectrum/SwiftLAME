@@ -75,4 +75,21 @@ final class Lame {
         )
         return Int(encodeLength)
     }
+    
+    func encodeBufferInt32(
+        data: UnsafePointer<UnsafeMutablePointer<Int32>>,
+        frameLength: AVAudioFrameCount,
+        baseAddress: UnsafeMutablePointer<UInt8>,
+        outputBufferSize: AVAudioFrameCount
+    ) -> Int {
+        let encodeLength = lame_encode_buffer_int(
+            lame,
+            data.pointee,
+            data.pointee,
+            Int32(frameLength),
+            baseAddress,
+            Int32(outputBufferSize)
+        )
+        return Int(encodeLength)
+    }
 }
