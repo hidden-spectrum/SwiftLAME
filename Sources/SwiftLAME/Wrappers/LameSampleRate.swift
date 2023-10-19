@@ -5,9 +5,11 @@
 import Foundation
 
 
-public enum SampleRate {
+public enum LameSampleRate {
     case `default`
     case custom(Int32)
+    
+    // MARK: Internal
     
     var lameRepresentation: Int32 {
         switch self {
