@@ -31,7 +31,13 @@ public struct LAMEEncoder {
             throw LAMEEncoderError.couldNotCreateAudioPCMBuffer
         }
         
-        let lame = LAME(for: audioFile, bitrateMode: .constant(320), quality: .standard, sampleRate: .default)
+        let lame = LAME(
+            for: audioFile,
+            numberOfChannels: sourceAudioBuffer.format.channelCount,
+            bitrateMode: .constant(320),
+            quality: .standard,
+            sampleRate: .default
+        )
         
         guard let outputStream = OutputStream(url: destinationURL, append: true) else {
             throw LAMEEncoderError.couldNotCreateOutputStreamTo(url: destinationURL)

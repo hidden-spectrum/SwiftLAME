@@ -20,11 +20,12 @@ public final class LAME {
     
     // MARK: Lifecycle
     
-    public init(for audioFile: AVAudioFile, bitrateMode: BitrateMode, quality: LAMEQuality, sampleRate: SampleRate) {
+    public init(for audioFile: AVAudioFile, numberOfChannels: UInt32, bitrateMode: BitrateMode, quality: LAMEQuality, sampleRate: SampleRate) {
         let lame = lame_init()
         lame_set_in_samplerate(lame, Int32(audioFile.processingFormat.sampleRate))
         lame_set_out_samplerate(lame, sampleRate.lameRepresentation)
         lame_set_quality(lame, quality.rawValue)
+        lame_set_num_channels(lame, Int32(numberOfChannels))
         bitrateMode.configure(on: lame)
         lame_init_params(lame)
         self.lame = lame
@@ -60,13 +61,13 @@ public final class LAME {
                 encodeLength = lame_encode_flush_nogap(
                     lame,
                     baseAddress,
-                    0
+                    Int32(outputBufferSize)
                 )
             } else {
                 encodeLength = lame_encode_buffer_ieee_float(
                     lame, 
-                    sourceChannelData[0],
-                    sourceChannelData[1],
+                    sourceChannelData.pointee,
+                    sourceChannelData.pointee,
                     Int32(frameLength),
                     baseAddress,
                     Int32(outputBufferSize)
