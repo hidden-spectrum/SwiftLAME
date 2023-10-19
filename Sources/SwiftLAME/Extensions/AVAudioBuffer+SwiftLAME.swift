@@ -6,22 +6,25 @@ import AVFAudio
 
 
 extension AVAudioPCMBuffer {
-    func int16ChannelData() -> Data? {gi
-        guard let floatData = int16ChannelData else {
+    func int16ChannelDataFromFloat() -> UnsafePointer<UnsafeMutablePointer<Int16>>? {
+        guard let floatData = floatChannelData else {
             return nil
         }
         
-        let totalSamples = Int(frameLength) * Int(format.channelCount)
+        let frameLength = self.frameLength
+        let numChannels = format.channelCount
         
-        var outputData = Data(capacity: totalSamples * MemoryLayout<Int16>.size)
+        let outerPointer = UnsafeMutablePointer<UnsafeMutablePointer<Int16>>.allocate(capacity: Int(numChannels))
+        
+        for channel in 0..<Int(numChannels) {
+            let innerPointer = UnsafeMutablePointer<Int16>.allocate(capacity: Int(frameLength))
+            outerPointer[channel] = innerPointer
             
-        for i in 0..<totalSamples {
-            var int16Value: Int16 = Int16(floatData[0][i] * 32767.0)
-            var buffer = Data()
-            withUnsafeBytes(of: &int16Value) { buffer.append(contentsOf: $0) }
-            outputData.append(buffer)
+            for frame in 0..<Int(frameLength) {
+                innerPointer[frame] = Int16(floatData[channel][frame] * 32767.0)
+            }
         }
         
-        return outputData
+        return UnsafePointer(outerPointer)
     }
 }

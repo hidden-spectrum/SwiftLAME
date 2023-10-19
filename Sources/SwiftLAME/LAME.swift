@@ -40,20 +40,17 @@ public final class LAME {
         from sourceAudioBuffer: AVAudioPCMBuffer,
         to outputStream: OutputStream
     ) throws {
-        guard let sourceChannelData = sourceAudioBuffer.int16ChannelData else {
+        guard let sourceChannelData = sourceAudioBuffer.floatChannelData else {
             throw LAMEError.couldNotReadChannelDataFromPCMBuffer
         }
         let frameLength = sourceAudioBuffer.frameLength
-        let numChannels = sourceAudioBuffer.format.channelCount
-        let sourceAudioBufferDataSize = Int32(Int(frameLength) * Int(numChannels) * MemoryLayout<Int16>.size)
+        let channelCount = sourceAudioBuffer.format.channelCount
         
-        let int32FrameLength = Int32(frameLength)
-        
-        var outputBuffer = Data(count: Int(frameLength))
-        let outputBufferSize = Int32(outputBuffer.count)
+        let outputBufferSize = 7200 + frameLength * channelCount
+        var outputBuffer = Data(count: Int(outputBufferSize))
         var encodeLength: Int32 = 0
         
-        try outputBuffer.withUnsafeMutableBytes { rawOutputBufferPointer in
+        try outputBuffer.withUnsafeMutableBytes { (rawOutputBufferPointer: UnsafeMutableRawBufferPointer) in
             let boundBuffer = rawOutputBufferPointer.bindMemory(to: UInt8.self)
             guard let baseAddress = boundBuffer.baseAddress else {
                 throw LAMEError.couldNotGetRawOutputBufferPointerBaseAddress
@@ -63,16 +60,25 @@ public final class LAME {
                 encodeLength = lame_encode_flush_nogap(
                     lame,
                     baseAddress,
-                    int32FrameLength
+                    0
                 )
             } else {
-                encodeLength = lame_encode_buffer_interleaved(
-                    lame,
-                    sourceChannelData.pointee,
-                    sourceAudioBufferDataSize,
+                encodeLength = lame_encode_buffer_ieee_float(
+                    lame, 
+                    sourceChannelData[0],
+                    sourceChannelData[1],
+                    Int32(frameLength),
                     baseAddress,
-                    outputBufferSize
+                    Int32(outputBufferSize)
                 )
+                
+//                encodeLength = lame_encode_buffer_interleaved(
+//                    lame,
+//                    sourceChannelData.pointee,
+//                    sourceAudioBufferDataSize,
+//                    baseAddress,
+//                    outputBufferSize
+//                )
             }
             
             outputStream.write(baseAddress, maxLength: Int(encodeLength))
