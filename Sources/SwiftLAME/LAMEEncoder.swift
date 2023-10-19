@@ -33,7 +33,7 @@ public struct LAMEEncoder {
         
         let lame = LAME(
             for: audioFile,
-            numberOfChannels: sourceAudioBuffer.format.channelCount,
+            sourceChannelCount: sourceAudioBuffer.format.channelCount,
             bitrateMode: .constant(320),
             quality: .standard,
             sampleRate: .default

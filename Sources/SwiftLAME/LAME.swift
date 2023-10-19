@@ -20,12 +20,12 @@ public final class LAME {
     
     // MARK: Lifecycle
     
-    public init(for audioFile: AVAudioFile, numberOfChannels: UInt32, bitrateMode: BitrateMode, quality: LAMEQuality, sampleRate: SampleRate) {
+    public init(for audioFile: AVAudioFile, sourceChannelCount: UInt32, bitrateMode: BitrateMode, quality: LAMEQuality, sampleRate: SampleRate) {
         let lame = lame_init()
         lame_set_in_samplerate(lame, Int32(audioFile.processingFormat.sampleRate))
         lame_set_out_samplerate(lame, sampleRate.lameRepresentation)
         lame_set_quality(lame, quality.rawValue)
-        lame_set_num_channels(lame, Int32(numberOfChannels))
+        lame_set_num_channels(lame, Int32(sourceChannelCount))
         bitrateMode.configure(on: lame)
         lame_init_params(lame)
         self.lame = lame
@@ -49,7 +49,7 @@ public final class LAME {
         
         let outputBufferSize = 7200 + frameLength * channelCount
         var outputBuffer = Data(count: Int(outputBufferSize))
-        var encodeLength: Int32 = 0
+        var encodeLength: Int = 0
         
         try outputBuffer.withUnsafeMutableBytes { (rawOutputBufferPointer: UnsafeMutableRawBufferPointer) in
             let boundBuffer = rawOutputBufferPointer.bindMemory(to: UInt8.self)
@@ -58,31 +58,55 @@ public final class LAME {
             }
             
             if frameLength == 0 {
-                encodeLength = lame_encode_flush_nogap(
-                    lame,
-                    baseAddress,
-                    Int32(outputBufferSize)
-                )
+                encodeLength = encodeFlushNoGap(at: baseAddress)
             } else {
-                encodeLength = lame_encode_buffer_ieee_float(
-                    lame, 
-                    sourceChannelData.pointee,
-                    sourceChannelData.pointee,
-                    Int32(frameLength),
-                    baseAddress,
-                    Int32(outputBufferSize)
+                encodeLength = encodeBufferIEEEFloat(
+                    data: sourceChannelData,
+                    frameLength: frameLength,
+                    baseAddress: baseAddress,
+                    outputBufferSize: outputBufferSize
                 )
-                
-//                encodeLength = lame_encode_buffer_interleaved(
-//                    lame,
-//                    sourceChannelData.pointee,
-//                    sourceAudioBufferDataSize,
-//                    baseAddress,
-//                    outputBufferSize
-//                )
             }
             
             outputStream.write(baseAddress, maxLength: Int(encodeLength))
         }
+    }
+    
+    func encodeFlushNoGap(at baseAddress: UnsafeMutablePointer<UInt8>) -> Int {
+        let encodeLength = lame_encode_flush_nogap(lame, baseAddress, 0)
+        return Int(encodeLength)
+    }
+    
+    func encodeBufferIEEEFloat(
+        data: UnsafePointer<UnsafeMutablePointer<Float>>,
+        frameLength: AVAudioFrameCount,
+        baseAddress: UnsafeMutablePointer<UInt8>,
+        outputBufferSize: UInt32
+    ) -> Int {
+        let encodeLength = lame_encode_buffer_ieee_float(
+            lame,
+            data.pointee,
+            data.pointee,
+            Int32(frameLength),
+            baseAddress,
+            Int32(outputBufferSize)
+        )
+        return Int(encodeLength)
+    }
+    
+    func encodeBufferInterleaved(
+        data: UnsafePointer<UnsafeMutablePointer<Int16>>,
+        frameLength: AVAudioFrameCount,
+        baseAddress: UnsafeMutablePointer<UInt8>,
+        outputBufferSize: UInt32
+    ) -> Int {
+        let encodeLength = lame_encode_buffer_interleaved(
+            lame,
+            data.pointee,
+            Int32(frameLength),
+            baseAddress,
+            Int32(outputBufferSize)
+        )
+        return Int(encodeLength)
     }
 }
