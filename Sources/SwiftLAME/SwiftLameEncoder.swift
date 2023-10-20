@@ -43,12 +43,15 @@ public struct SwiftLameEncoder {
         var tmpEncodingBuffer = Data(count: bufferCapacity)
         
         outputStream.open()
-        var framePosition: AVAudioFramePosition = 0
+        var position: AVAudioFramePosition = 0
         
-        while framePosition < sourceAudioFile.length {
+        while position < sourceAudioFile.length {
             try sourceAudioFile.read(into: sourceAudioBuffer)
-            try encodeFrame(with: lame, from: sourceAudioBuffer, to: outputStream, using: &tmpEncodingBuffer, currentPosition: framePosition)
-            framePosition += AVAudioFramePosition(sourceAudioBuffer.frameLength)
+            
+            position += AVAudioFramePosition(sourceAudioBuffer.frameLength)
+            let isLastFrame = position == sourceAudioFile.length
+            
+            try encodeFrame(with: lame, from: sourceAudioBuffer, to: outputStream, using: &tmpEncodingBuffer, isLastFrame: isLastFrame)
         }
         
         outputStream.close()
@@ -59,7 +62,7 @@ public struct SwiftLameEncoder {
         from sourceAudioBuffer: AVAudioPCMBuffer,
         to outputStream: OutputStream,
         using tmpEncodingBuffer: inout Data,
-        currentPosition: AVAudioFramePosition
+        isLastFrame: Bool
     ) throws {
         let sourceChannelData = try sourceAudioBuffer.getChannelData()
         let frameCount = sourceAudioBuffer.frameLength
@@ -81,7 +84,6 @@ public struct SwiftLameEncoder {
             
             outputStream.write(bufferAddress, maxLength: encodeLength)
             
-            let isLastFrame = currentPosition + AVAudioFramePosition(sourceAudioBuffer.frameLength) == sourceAudioFile.length
             if isLastFrame {
                 let finalEncodeLength = lame.finalizeEncoding(
                     usingBufferAt: bufferAddress,
