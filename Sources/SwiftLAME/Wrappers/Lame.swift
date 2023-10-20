@@ -128,11 +128,11 @@ final class Lame {
     
     // MARK: Flush
     
-    func encodeFlushNoGap(at baseAddress: UnsafeMutablePointer<UInt8>, outputBufferSize: AVAudioFrameCount) -> Int {
+    func encodeFlushNoGap(from bufferAddress: UnsafeMutablePointer<UInt8>, outputBufferSize: AVAudioFrameCount) -> Int {
         let encodeLength = lame_encode_flush_nogap(
             lame,
-            baseAddress,
-            0
+            bufferAddress,
+            Int32(outputBufferSize)
         )
         return Int(encodeLength)
     }

@@ -45,8 +45,10 @@ public struct SwiftLameEncoder {
         var position: AVAudioFramePosition = 0
         
         while position < sourceAudioFile.length {
+            print("\nCurrent postion: \(position) / \(sourceAudioFile.length)\nFrame length: \(sourceAudioBuffer.frameLength)\n")
+            
             try sourceAudioFile.read(into: sourceAudioBuffer)
-            try encodeFrame(using: lame, from: sourceAudioBuffer, to: outputStream)
+            try encodeFrame(using: lame, from: sourceAudioBuffer, to: outputStream, currentPosition: position)
             position += AVAudioFramePosition(sourceAudioBuffer.frameLength)
         }
         
@@ -56,37 +58,39 @@ public struct SwiftLameEncoder {
     private func encodeFrame(
         using lame: Lame,
         from sourceAudioBuffer: AVAudioPCMBuffer,
-        to outputStream: OutputStream
+        to outputStream: OutputStream,
+        currentPosition: AVAudioFramePosition
     ) throws {
         let sourceChannelData = try sourceAudioBuffer.getChannelData()
         let frameLength = sourceAudioBuffer.frameLength
         let outputBufferSize = frameLength * lame.sourceChannelCount
         var outputBuffer = Data(count: Int(outputBufferSize))
         
-        var encodeLength = 0
-        
         try outputBuffer.withUnsafeMutableBytes { (rawOutputBufferPointer: UnsafeMutableRawBufferPointer) in
             let boundBuffer = rawOutputBufferPointer.bindMemory(to: UInt8.self)
-            guard let baseAddress = boundBuffer.baseAddress else {
+            guard let bufferAddress = boundBuffer.baseAddress else {
                 throw SwiftLameError.couldNotGetRawOutputBufferPointerBaseAddress
             }
             
-            if frameLength == 0 {
-                encodeLength = lame.encodeFlushNoGap(
-                    at: baseAddress,
-                    outputBufferSize: outputBufferSize
-                )
-            } else {
-                encodeLength = encodeChannelData(
-                    sourceChannelData,
-                    using: lame,
-                    frameLength: frameLength,
-                    baseAddress: baseAddress,
-                    outputBufferSize: outputBufferSize
-                )
-            }
+            let encodeLength = encodeChannelData(
+                sourceChannelData,
+                using: lame,
+                frameLength: frameLength,
+                baseAddress: bufferAddress,
+                outputBufferSize: outputBufferSize
+            )
             
-            outputStream.write(baseAddress, maxLength: encodeLength)
+            outputStream.write(bufferAddress, maxLength: encodeLength)
+            
+            let isLastFrame = currentPosition + AVAudioFramePosition(sourceAudioBuffer.frameLength) == sourceAudioFile.length
+            
+            if isLastFrame {
+                let finalEncodeLength = lame.encodeFlushNoGap(
+                    from: bufferAddress,
+                    outputBufferSize: outputBufferSize
+                )
+                outputStream.write(bufferAddress, maxLength: finalEncodeLength)
+            }
         }
     }
     
