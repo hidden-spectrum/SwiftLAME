@@ -51,7 +51,7 @@ final class Lame {
             frameLength: frameLength,
             baseAddress: baseAddress,
             outputBufferSize: outputBufferSize,
-            interleavedEncoder: { (pcm, nsamples, mp3buf, mp3buf_size) in
+            interleavedEncoder: { (lame, pcm, nsamples, mp3buf, mp3buf_size) in
                 return lame_encode_buffer_interleaved_ieee_float(lame, pcm, nsamples, mp3buf, mp3buf_size)
             },
             nonInterleavedEncoder: lame_encode_buffer_ieee_float
@@ -69,9 +69,7 @@ final class Lame {
             frameLength: frameLength,
             baseAddress: baseAddress,
             outputBufferSize: outputBufferSize,
-            interleavedEncoder: { (pcm, nsamples, mp3buf, mp3buf_size) in
-                return lame_encode_buffer_interleaved(lame, pcm, nsamples, mp3buf, mp3buf_size)
-            },
+            interleavedEncoder: lame_encode_buffer_interleaved,
             nonInterleavedEncoder: lame_encode_buffer
         )
     }
@@ -87,7 +85,7 @@ final class Lame {
             frameLength: frameLength,
             baseAddress: baseAddress,
             outputBufferSize: outputBufferSize,
-            interleavedEncoder: { (pcm, nsamples, mp3buf, mp3buf_size) in
+            interleavedEncoder: { (lame, pcm, nsamples, mp3buf, mp3buf_size) in
                 return lame_encode_buffer_interleaved_int(lame, pcm, nsamples, mp3buf, mp3buf_size)
             },
             nonInterleavedEncoder: lame_encode_buffer_int
@@ -99,13 +97,14 @@ final class Lame {
         frameLength: AVAudioFrameCount,
         baseAddress: UnsafeMutablePointer<UInt8>,
         outputBufferSize: AVAudioFrameCount,
-        interleavedEncoder: (UnsafeMutablePointer<T>, Int32, UnsafeMutablePointer<UInt8>, Int32) -> Int32,
+        interleavedEncoder: (OpaquePointer?, UnsafeMutablePointer<T>, Int32, UnsafeMutablePointer<UInt8>, Int32) -> Int32,
         nonInterleavedEncoder: (OpaquePointer?, UnsafePointer<T>?, UnsafePointer<T>, Int32, UnsafeMutablePointer<UInt8>, Int32) -> Int32
     ) -> Int {
         var encodeLength: Int32
         
         if isInterleaved {
             encodeLength = interleavedEncoder(
+                lame,
                 data.pointee,
                 Int32(frameLength),
                 baseAddress,
