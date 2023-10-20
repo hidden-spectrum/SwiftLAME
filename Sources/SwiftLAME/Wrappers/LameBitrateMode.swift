@@ -14,7 +14,6 @@ public enum LameBitrateMode {
     func configure(on lame: lame_t?) {
         switch self {
         case .constant(let bitrate):
-            lame_set_VBR(lame, LameVbrMode.off.lameRepresentation)
             lame_set_brate(lame, bitrate)
         case .variable(let vbrMode):
             lame_set_VBR(lame, vbrMode.lameRepresentation)

@@ -15,7 +15,7 @@ public struct LameConfiguration {
     
     // MARK: Lifecycle
     
-    public init(bitrateMode: LameBitrateMode, quality: LameQuality = .standard, sampleRate: LameSampleRate = .default) {
+    public init(sampleRate: LameSampleRate = .default, bitrateMode: LameBitrateMode, quality: LameQuality = .standard) {
         self.bitrateMode = bitrateMode
         self.quality = quality
         self.sampleRate = sampleRate
