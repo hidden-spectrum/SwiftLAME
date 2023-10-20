@@ -101,7 +101,7 @@ public struct SwiftLameEncoder {
         case .float(let data):
             return lame.encodeBufferIEEEFloat(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
         case .int16(let data):
-            return lame.encodeBufferInterleaved(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
+            return lame.encodeBufferInt16(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
         case .int32(let data):
             return lame.encodeBufferInt32(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
         }
