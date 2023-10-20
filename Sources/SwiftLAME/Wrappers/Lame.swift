@@ -132,7 +132,7 @@ final class Lame {
         let encodeLength = lame_encode_flush_nogap(
             lame,
             baseAddress,
-            Int32(outputBufferSize)
+            0
         )
         return Int(encodeLength)
     }

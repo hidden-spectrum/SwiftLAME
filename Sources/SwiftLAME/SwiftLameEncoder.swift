@@ -46,14 +46,14 @@ public struct SwiftLameEncoder {
         
         while position < sourceAudioFile.length {
             try sourceAudioFile.read(into: sourceAudioBuffer)
-            try encodeChunk(using: lame, from: sourceAudioBuffer, to: outputStream)
+            try encodeFrame(using: lame, from: sourceAudioBuffer, to: outputStream)
             position += AVAudioFramePosition(sourceAudioBuffer.frameLength)
         }
         
         outputStream.close()
     }
     
-    private func encodeChunk(
+    private func encodeFrame(
         using lame: Lame,
         from sourceAudioBuffer: AVAudioPCMBuffer,
         to outputStream: OutputStream
