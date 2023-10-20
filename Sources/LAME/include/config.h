@@ -21,7 +21,7 @@
 /* #undef C_ALLOCA */
 
 /* alot of debug output */
-/* #undef DEBUG */
+#undef DEBUG
 
 /* allow to compute a more accurate replaygain value */
 #define DECODE_ON_THE_FLY 1

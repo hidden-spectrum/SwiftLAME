@@ -10,13 +10,15 @@ public struct SwiftLameEncoder {
     private let configuration: LameConfiguration
     private let destinationUrl: URL
     private let frameCount: AVAudioFrameCount = 1024 * 8
+    private let progress: Progress?
     private let sourceAudioFile: AVAudioFile
     
     // MARK: Lifecycle
     
-    public init(sourceUrl: URL, configuration: LameConfiguration, destinationUrl: URL) throws {
+    public init(sourceUrl: URL, configuration: LameConfiguration, destinationUrl: URL, progress: Progress? = nil) throws {
         self.configuration = configuration
         self.destinationUrl = destinationUrl
+        self.progress = progress
         self.sourceAudioFile = try AVAudioFile(forReading: sourceUrl)
     }
     
@@ -42,6 +44,8 @@ public struct SwiftLameEncoder {
         let bufferCapacity = Int(frameCount * lame.sourceChannelCount)
         var tmpEncodingBuffer = Data(count: bufferCapacity)
         
+        progress?.totalUnitCount = Int64(sourceAudioFile.length)
+        
         outputStream.open()
         var position: AVAudioFramePosition = 0
         
@@ -52,6 +56,8 @@ public struct SwiftLameEncoder {
             let isLastFrame = position == sourceAudioFile.length
             
             try encodeFrame(with: lame, from: sourceAudioBuffer, to: outputStream, using: &tmpEncodingBuffer, isLastFrame: isLastFrame)
+            
+            progress?.completedUnitCount = Int64(position)
         }
         
         outputStream.close()
