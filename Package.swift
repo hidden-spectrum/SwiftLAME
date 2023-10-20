@@ -31,7 +31,8 @@ let package = Package(
             name: "LAME",
             publicHeadersPath: "include",
             cSettings: [
-                .define("HAVE_CONFIG_H")
+                .define("HAVE_CONFIG_H"),
+                .unsafeFlags(["-w"])
             ]
         ),
         
