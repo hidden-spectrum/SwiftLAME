@@ -39,7 +39,6 @@ public struct SwiftLameEncoder {
         }
         
         let lame = Lame(for: sourceAudioFile, configuration: configuration)
-        
         let bufferCapacity = Int(frameCount * lame.sourceChannelCount)
         var tmpEncodingBuffer = Data(count: bufferCapacity)
         
@@ -59,14 +58,14 @@ public struct SwiftLameEncoder {
         with lame: Lame,
         from sourceAudioBuffer: AVAudioPCMBuffer,
         to outputStream: OutputStream,
-        using temporaryEncodingBuffer: inout Data,
+        using tmpEncodingBuffer: inout Data,
         currentPosition: AVAudioFramePosition
     ) throws {
         let sourceChannelData = try sourceAudioBuffer.getChannelData()
         let frameCount = sourceAudioBuffer.frameLength
-        let bufferCapacity = temporaryEncodingBuffer.count
+        let bufferCapacity = tmpEncodingBuffer.count
         
-        try temporaryEncodingBuffer.withUnsafeMutableBytes { (bufferPointer: UnsafeMutableRawBufferPointer) in
+        try tmpEncodingBuffer.withUnsafeMutableBytes { (bufferPointer: UnsafeMutableRawBufferPointer) in
             let memoryBoundBuffer = bufferPointer.bindMemory(to: UInt8.self)
             guard let bufferAddress = memoryBoundBuffer.baseAddress else {
                 throw SwiftLameError.couldNotGetRawOutputBufferPointerBaseAddress
@@ -83,7 +82,6 @@ public struct SwiftLameEncoder {
             outputStream.write(bufferAddress, maxLength: encodeLength)
             
             let isLastFrame = currentPosition + AVAudioFramePosition(sourceAudioBuffer.frameLength) == sourceAudioFile.length
-            
             if isLastFrame {
                 let finalEncodeLength = lame.finalizeEncoding(
                     usingBufferAt: bufferAddress,
