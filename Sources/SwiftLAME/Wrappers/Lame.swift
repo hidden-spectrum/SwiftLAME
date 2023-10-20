@@ -40,17 +40,17 @@ final class Lame {
     
     // MARK: Encoding
     
-    func encodeBufferIEEEFloat(
-        data: UnsafePointer<UnsafeMutablePointer<Float>>,
-        frameLength: AVAudioFrameCount,
-        baseAddress: UnsafeMutablePointer<UInt8>,
-        outputBufferSize: AVAudioFrameCount
+    func encodeIEEEFloatData(
+        _ data: UnsafePointer<UnsafeMutablePointer<Float>>,
+        frameCount: AVAudioFrameCount,
+        fillingBufferAt bufferAddress: UnsafeMutablePointer<UInt8>,
+        with capacity: Int
     ) -> Int {
-        return encodeBuffer(
-            data: data,
-            frameLength: frameLength,
-            baseAddress: baseAddress,
-            outputBufferSize: outputBufferSize,
+        return encodeData(
+            data,
+            frameCount: frameCount,
+            fillingBufferAt: bufferAddress,
+            with: capacity,
             interleavedEncoder: { (lame, pcm, nsamples, mp3buf, mp3buf_size) in
                 return lame_encode_buffer_interleaved_ieee_float(lame, pcm, nsamples, mp3buf, mp3buf_size)
             },
@@ -58,33 +58,33 @@ final class Lame {
         )
     }
     
-    func encodeBufferInt16(
-        data: UnsafePointer<UnsafeMutablePointer<Int16>>,
-        frameLength: AVAudioFrameCount,
-        baseAddress: UnsafeMutablePointer<UInt8>,
-        outputBufferSize: AVAudioFrameCount
+    func encodeInt16Data(
+        _ data: UnsafePointer<UnsafeMutablePointer<Int16>>,
+        frameCount: AVAudioFrameCount,
+        fillingBufferAt bufferAddress: UnsafeMutablePointer<UInt8>,
+        with capacity: Int
     ) -> Int {
-        return encodeBuffer(
-            data: data,
-            frameLength: frameLength,
-            baseAddress: baseAddress,
-            outputBufferSize: outputBufferSize,
+        return encodeData(
+            data,
+            frameCount: frameCount,
+            fillingBufferAt: bufferAddress,
+            with: capacity,
             interleavedEncoder: lame_encode_buffer_interleaved,
             nonInterleavedEncoder: lame_encode_buffer
         )
     }
     
-    func encodeBufferInt32(
-        data: UnsafePointer<UnsafeMutablePointer<Int32>>,
-        frameLength: AVAudioFrameCount,
-        baseAddress: UnsafeMutablePointer<UInt8>,
-        outputBufferSize: AVAudioFrameCount
+    func encodeInt32Data(
+        _ data: UnsafePointer<UnsafeMutablePointer<Int32>>,
+        frameCount: AVAudioFrameCount,
+        fillingBufferAt bufferAddress: UnsafeMutablePointer<UInt8>,
+        with capacity: Int
     ) -> Int {
-        return encodeBuffer(
-            data: data,
-            frameLength: frameLength,
-            baseAddress: baseAddress,
-            outputBufferSize: outputBufferSize,
+        return encodeData(
+            data,
+            frameCount: frameCount,
+            fillingBufferAt: bufferAddress,
+            with: capacity,
             interleavedEncoder: { (lame, pcm, nsamples, mp3buf, mp3buf_size) in
                 return lame_encode_buffer_interleaved_int(lame, pcm, nsamples, mp3buf, mp3buf_size)
             },
@@ -92,11 +92,11 @@ final class Lame {
         )
     }
     
-    private func encodeBuffer<T>(
-        data: UnsafePointer<UnsafeMutablePointer<T>>,
-        frameLength: AVAudioFrameCount,
-        baseAddress: UnsafeMutablePointer<UInt8>,
-        outputBufferSize: AVAudioFrameCount,
+    private func encodeData<T>(
+        _ data: UnsafePointer<UnsafeMutablePointer<T>>,
+        frameCount: AVAudioFrameCount,
+        fillingBufferAt bufferAddress: UnsafeMutablePointer<UInt8>,
+        with capacity: Int,
         interleavedEncoder: (OpaquePointer?, UnsafeMutablePointer<T>, Int32, UnsafeMutablePointer<UInt8>, Int32) -> Int32,
         nonInterleavedEncoder: (OpaquePointer?, UnsafePointer<T>?, UnsafePointer<T>, Int32, UnsafeMutablePointer<UInt8>, Int32) -> Int32
     ) -> Int {
@@ -106,9 +106,9 @@ final class Lame {
             encodeLength = interleavedEncoder(
                 lame,
                 data.pointee,
-                Int32(frameLength),
-                baseAddress,
-                Int32(outputBufferSize)
+                Int32(frameCount),
+                bufferAddress,
+                Int32(capacity)
             )
         } else {
             let leftChannel = sourceChannelCount == 2 ? data[0] : data.pointee
@@ -117,22 +117,22 @@ final class Lame {
                 lame,
                 leftChannel,
                 rightChannel,
-                Int32(frameLength),
-                baseAddress,
-                Int32(outputBufferSize)
+                Int32(frameCount),
+                bufferAddress,
+                Int32(capacity)
             )
         }
         
         return Int(encodeLength)
     }
     
-    // MARK: Flush
+    // MARK: Finalize
     
-    func encodeFlushNoGap(from bufferAddress: UnsafeMutablePointer<UInt8>, outputBufferSize: AVAudioFrameCount) -> Int {
-        let encodeLength = lame_encode_flush_nogap(
+    func finalizeEncoding(usingBufferAt bufferAddress: UnsafeMutablePointer<UInt8>, with capacity: Int) -> Int {
+        let encodeLength = lame_encode_flush(
             lame,
             bufferAddress,
-            Int32(outputBufferSize)
+            Int32(capacity)
         )
         return Int(encodeLength)
     }

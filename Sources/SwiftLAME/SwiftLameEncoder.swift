@@ -9,7 +9,7 @@ public struct SwiftLameEncoder {
     
     private let configuration: LameConfiguration
     private let destinationUrl: URL
-    private let headerSafetyNetByteCount: UInt32 = 7200
+    private let frameCount: AVAudioFrameCount = 1024 * 8
     private let sourceAudioFile: AVAudioFile
     
     // MARK: Lifecycle
@@ -30,9 +30,8 @@ public struct SwiftLameEncoder {
     
     private func _encode() throws {
         let audioFormat = sourceAudioFile.processingFormat
-        let frameCapacity: AVAudioFrameCount = 1024 * 8
         
-        guard let sourceAudioBuffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: frameCapacity) else {
+        guard let sourceAudioBuffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: frameCount) else {
             throw SwiftLameError.couldNotCreateAudioPCMBuffer
         }
         guard let outputStream = OutputStream(url: destinationUrl, append: true) else {
@@ -41,43 +40,44 @@ public struct SwiftLameEncoder {
         
         let lame = Lame(for: sourceAudioFile, configuration: configuration)
         
-        outputStream.open()
-        var position: AVAudioFramePosition = 0
+        let bufferCapacity = Int(frameCount * lame.sourceChannelCount)
+        var tmpEncodingBuffer = Data(count: bufferCapacity)
         
-        while position < sourceAudioFile.length {
-            print("\nCurrent postion: \(position) / \(sourceAudioFile.length)\nFrame length: \(sourceAudioBuffer.frameLength)\n")
-            
+        outputStream.open()
+        var framePosition: AVAudioFramePosition = 0
+        
+        while framePosition < sourceAudioFile.length {
             try sourceAudioFile.read(into: sourceAudioBuffer)
-            try encodeFrame(using: lame, from: sourceAudioBuffer, to: outputStream, currentPosition: position)
-            position += AVAudioFramePosition(sourceAudioBuffer.frameLength)
+            try encodeFrame(with: lame, from: sourceAudioBuffer, to: outputStream, using: &tmpEncodingBuffer, currentPosition: framePosition)
+            framePosition += AVAudioFramePosition(sourceAudioBuffer.frameLength)
         }
         
         outputStream.close()
     }
     
     private func encodeFrame(
-        using lame: Lame,
+        with lame: Lame,
         from sourceAudioBuffer: AVAudioPCMBuffer,
         to outputStream: OutputStream,
+        using temporaryEncodingBuffer: inout Data,
         currentPosition: AVAudioFramePosition
     ) throws {
         let sourceChannelData = try sourceAudioBuffer.getChannelData()
-        let frameLength = sourceAudioBuffer.frameLength
-        let outputBufferSize = frameLength * lame.sourceChannelCount
-        var outputBuffer = Data(count: Int(outputBufferSize))
+        let frameCount = sourceAudioBuffer.frameLength
+        let bufferCapacity = temporaryEncodingBuffer.count
         
-        try outputBuffer.withUnsafeMutableBytes { (rawOutputBufferPointer: UnsafeMutableRawBufferPointer) in
-            let boundBuffer = rawOutputBufferPointer.bindMemory(to: UInt8.self)
-            guard let bufferAddress = boundBuffer.baseAddress else {
+        try temporaryEncodingBuffer.withUnsafeMutableBytes { (bufferPointer: UnsafeMutableRawBufferPointer) in
+            let memoryBoundBuffer = bufferPointer.bindMemory(to: UInt8.self)
+            guard let bufferAddress = memoryBoundBuffer.baseAddress else {
                 throw SwiftLameError.couldNotGetRawOutputBufferPointerBaseAddress
             }
             
             let encodeLength = encodeChannelData(
                 sourceChannelData,
-                using: lame,
-                frameLength: frameLength,
-                baseAddress: bufferAddress,
-                outputBufferSize: outputBufferSize
+                with: lame,
+                frameCount: frameCount,
+                usingBufferAt: bufferAddress,
+                capacity: bufferCapacity
             )
             
             outputStream.write(bufferAddress, maxLength: encodeLength)
@@ -85,9 +85,9 @@ public struct SwiftLameEncoder {
             let isLastFrame = currentPosition + AVAudioFramePosition(sourceAudioBuffer.frameLength) == sourceAudioFile.length
             
             if isLastFrame {
-                let finalEncodeLength = lame.encodeFlushNoGap(
-                    from: bufferAddress,
-                    outputBufferSize: outputBufferSize
+                let finalEncodeLength = lame.finalizeEncoding(
+                    usingBufferAt: bufferAddress,
+                    with: bufferCapacity
                 )
                 outputStream.write(bufferAddress, maxLength: finalEncodeLength)
             }
@@ -96,18 +96,18 @@ public struct SwiftLameEncoder {
     
     private func encodeChannelData(
         _ channelData: AVAudioChannelData,
-        using lame: Lame,
-        frameLength: AVAudioFrameCount,
-        baseAddress: UnsafeMutablePointer<UInt8>,
-        outputBufferSize: UInt32
+        with lame: Lame,
+        frameCount: AVAudioFrameCount,
+        usingBufferAt bufferAddress: UnsafeMutablePointer<UInt8>,
+        capacity: Int
     ) -> Int {
         switch channelData {
         case .float(let data):
-            return lame.encodeBufferIEEEFloat(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
+            return lame.encodeIEEEFloatData(data, frameCount: frameCount, fillingBufferAt: bufferAddress, with: capacity)
         case .int16(let data):
-            return lame.encodeBufferInt16(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
+            return lame.encodeInt16Data(data, frameCount: frameCount, fillingBufferAt: bufferAddress, with: capacity)
         case .int32(let data):
-            return lame.encodeBufferInt32(data: data, frameLength: frameLength, baseAddress: baseAddress, outputBufferSize: outputBufferSize)
+            return lame.encodeInt32Data(data, frameCount: frameCount, fillingBufferAt: bufferAddress, with: capacity)
         }
     }
 }
