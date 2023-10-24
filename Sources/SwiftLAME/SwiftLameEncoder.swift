@@ -41,7 +41,8 @@ public struct SwiftLameEncoder {
         }
         
         let lame = Lame(for: sourceAudioFile, configuration: configuration)
-        let bufferCapacity = Int(frameCount * lame.sourceChannelCount)
+        let mBytesPerFrame = sourceAudioFile.processingFormat.streamDescription.pointee.mBytesPerFrame
+        let bufferCapacity = Int(frameCount * mBytesPerFrame)
         var tmpEncodingBuffer = Data(count: bufferCapacity)
         
         progress?.totalUnitCount = Int64(sourceAudioFile.length)
