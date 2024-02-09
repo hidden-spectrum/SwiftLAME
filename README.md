@@ -4,7 +4,7 @@ SwiftLAME is a lightweight Swift wrapper around the [open-source LAME project](h
 
 
 ## Requirements
-SwiftLAME has been tested on macOS 12+, and iOS 15+. Although older versions are likely supported. Consider contributing a change to Package.swift if you find older versions are supported.
+SwiftLAME has been tested on macOS 12+, and iOS 15+. Although older versions are likely supported. Consider contributing a change to Package.swift if you find this to be the case.
 
 ## Installation
 
