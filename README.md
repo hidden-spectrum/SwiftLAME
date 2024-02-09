@@ -36,7 +36,7 @@ try await lameEncoder.encode(priority: .userInitiated)
 ```
 
 ## Source Codec Support
-SwiftLAME supports converting the following codecs:
+SwiftLAME supports converting the from following codecs:
 - WAV
 - AIFF
 - Raw PCM
