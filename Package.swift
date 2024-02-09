@@ -1,23 +1,41 @@
 // swift-tools-version: 5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
+
 let package = Package(
     name: "SwiftLAME",
+    platforms: [.macOS(.v12), .iOS(.v15)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "SwiftLAME",
-            targets: ["SwiftLAME"]),
+            targets: [
+                "SwiftLAME"
+            ]
+        )
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
+        
+        // Targets
+        
         .target(
-            name: "SwiftLAME"),
+            name: "SwiftLAME",
+            dependencies: ["LAME"]
+        ),
+        .target(
+            name: "LAME",
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("HAVE_CONFIG_H"),
+                .unsafeFlags(["-w", "-Xanalyzer", "-analyzer-disable-all-checks"])
+            ]
+        ),
+        
+        // Tests
+        
         .testTarget(
             name: "SwiftLAMETests",
-            dependencies: ["SwiftLAME"]),
+            dependencies: ["SwiftLAME"]
+        )
     ]
 )
