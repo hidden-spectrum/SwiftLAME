@@ -1,6 +1,6 @@
 # SwiftLAME
 
-SwiftLAME is a lightweight Swift wrapper around the [open-source LAME project](https://lame.sourceforge.io) for converting audio files to MP3.
+SwiftLAME is a lightweight Swift wrapper around the [open-source LAME project](https://lame.sourceforge.io) for converting audio files to MP3. This project was created to support the MP3 conversion feature of our [Producer Toolkit macOS App](https://hiddenspectrum.io/producer-toolkit).
 
 
 ## Requirements
