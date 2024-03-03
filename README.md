@@ -1,4 +1,5 @@
-![SwiftLAME Light](https://github.com/hidden-spectrum/SwiftLAME/assets/469799/02bfac1f-8d47-4a0a-afd3-5e4c08d99549)
+
+![SwiftLAME GH Banner](https://github.com/hidden-spectrum/SwiftLAME/assets/469799/a65a5d73-61fb-4ef8-9b7a-7e8a29446d73)
 
 SwiftLAME is a lightweight Swift wrapper around the [open-source LAME project](https://lame.sourceforge.io) for encoding audio files to MP3 format. This project was created to support the MP3 conversion feature of our [Producer Toolkit macOS App](https://hiddenspectrum.io/producer-toolkit).
 
